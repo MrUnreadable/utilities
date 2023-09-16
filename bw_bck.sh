@@ -70,7 +70,7 @@ this="${this%.sh}"
 
 # Working with parameters
 argv="$(getopt -l 'help,bin:,store:,keep:,format:,pid:,verbose' \
-	-o 'h,b:,s:,k:,f:,p:,v' -- $@)"
+	-o 'h,b:,s:,k:,f:,p:,v' -- "$@")"
 set -- $argv
 
 
@@ -160,10 +160,11 @@ printf 'Session Key:\n'
 # https://stackoverflow.com/questions/3980668/how-to-get-a-password-from-a-shell-script-without-echoing
 stty -echo
 trap 'stty echo' EXIT
-read -r session 
+read -r BW_SESSION
 stty echo
 trap - EXIT
-printf '\nsession key taken successfully'
+printf '\nsession key taken successfully\n'
+export BW_SESSION
 
 
 # To avoid that 'pidFile' could survive to
@@ -194,7 +195,7 @@ do
 
 
 	# sync the vault
-	bw sync -f --session "$session"
+	bw sync -f
 
 
 	# The USR1 signal is reached. The main loop is started.
@@ -217,7 +218,7 @@ do
 
 
 	# Check the status of the vault with the given session key
-	[ "$(bw status --session "$session" | jq -r .status)" = unlocked ] || {
+	[ "$(bw status | jq -r .status)" = unlocked ] || {
 		dbg_on_stderr 'Not a good session key.'
 		trap - EXIT INT QUIT TERM
 		cleanup
@@ -229,7 +230,7 @@ do
 	# if the session key is expired at this time
 	# the following 'bw' command will wait indefinitely.
 	tmpFile="$(mktemp)"
-	bw export --session "$session" --output "$tmpFile" --format encrypted_json
+	bw export --output "$tmpFile" --format encrypted_json
 
 
 	[ -z "$v" ] || dbg_on_stderr 'export finished.'
